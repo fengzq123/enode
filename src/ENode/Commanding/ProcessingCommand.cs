@@ -1,16 +1,16 @@
 ﻿using System.Collections.Generic;
-using ENode.Infrastructure;
+using System.Threading.Tasks;
 
 namespace ENode.Commanding
 {
-    public class ProcessingCommand : IProcessingMessage<ProcessingCommand, ICommand, CommandResult>
+    public class ProcessingCommand
     {
-        private ProcessingMessageMailbox<ProcessingCommand, ICommand, CommandResult> _mailbox;
-
+        public ProcessingCommandMailbox MailBox { get; set; }
+        public long Sequence { get; set; }
         public ICommand Message { get; private set; }
         public ICommandExecuteContext CommandExecuteContext { get; private set; }
-        public int ConcurrentRetriedCount { get; private set; }
         public IDictionary<string, string> Items { get; private set; }
+        public bool IsDuplicated { get; set; }
 
         public ProcessingCommand(ICommand command, ICommandExecuteContext commandExecuteContext, IDictionary<string, string> items)
         {
@@ -19,21 +19,9 @@ namespace ENode.Commanding
             Items = items ?? new Dictionary<string, string>();
         }
 
-        public void SetMailbox(ProcessingMessageMailbox<ProcessingCommand, ICommand, CommandResult> mailbox)
+        public Task CompleteAsync(CommandResult commandResult)
         {
-            _mailbox = mailbox;
-        }
-        public void Complete(CommandResult commandResult)
-        {
-            CommandExecuteContext.OnCommandExecuted(commandResult);
-            if (_mailbox != null)
-            {
-                _mailbox.CompleteMessage(this);
-            }
-        }
-        public void IncreaseConcurrentRetriedCount()
-        {
-            ConcurrentRetriedCount++;
+            return CommandExecuteContext.OnCommandExecutedAsync(commandResult);
         }
     }
 }

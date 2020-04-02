@@ -13,10 +13,11 @@ namespace ENode.Domain
     [Serializable]
     public abstract class AggregateRoot<TAggregateRootId> : IAggregateRoot
     {
+        private static readonly IList<IDomainEvent> _emptyEvents = new List<IDomainEvent>();
         private static IAggregateRootInternalHandlerProvider _eventHandlerProvider;
-        private int _version;
         private Queue<IDomainEvent> _uncommittedEvents;
         protected TAggregateRootId _id;
+        protected int _version;
 
         /// <summary>Gets or sets the unique identifier of the aggregate root.
         /// </summary>
@@ -87,6 +88,10 @@ namespace ENode.Domain
         /// <param name="domainEvent"></param>
         protected void ApplyEvent(IDomainEvent<TAggregateRootId> domainEvent)
         {
+            if (domainEvent == null)
+            {
+                throw new ArgumentNullException("domainEvent");
+            }
             if (Equals(this._id, default(TAggregateRootId)))
             {
                 throw new Exception("Aggregate root id cannot be null.");
@@ -98,7 +103,7 @@ namespace ENode.Domain
         }
         /// <summary>Apply multiple domain events to the current aggregate root.
         /// </summary>
-        /// <param name="domainEvent"></param>
+        /// <param name="domainEvents"></param>
         protected void ApplyEvents(params IDomainEvent<TAggregateRootId>[] domainEvents)
         {
             foreach (var domainEvent in domainEvents)
@@ -168,18 +173,17 @@ namespace ENode.Domain
         {
             if (_uncommittedEvents == null)
             {
-                return new IDomainEvent[0];
+                return _emptyEvents;
             }
             return _uncommittedEvents.ToArray();
         }
-        void IAggregateRoot.AcceptChanges(int newVersion)
+        void IAggregateRoot.AcceptChanges()
         {
-            if (_version + 1 != newVersion)
+            if (_uncommittedEvents != null && _uncommittedEvents.Any())
             {
-                throw new InvalidOperationException(string.Format("Cannot accept invalid version: {0}, expect version: {1}, current aggregateRoot type: {2}, id: {3}", newVersion, _version + 1, this.GetType().FullName, _id));
+                _version = _uncommittedEvents.First().Version;
+                _uncommittedEvents.Clear();
             }
-            _version = newVersion;
-            _uncommittedEvents.Clear();
         }
         void IAggregateRoot.ReplayEvents(IEnumerable<DomainEventStream> eventStreams)
         {

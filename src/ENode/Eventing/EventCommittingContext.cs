@@ -5,6 +5,7 @@ namespace ENode.Eventing
 {
     public class EventCommittingContext
     {
+        public EventCommittingContextMailBox MailBox { get; set; }
         public IAggregateRoot AggregateRoot { get; private set; }
         public DomainEventStream EventStream { get; private set; }
         public ProcessingCommand ProcessingCommand { get; private set; }
